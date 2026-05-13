@@ -13,8 +13,6 @@ Settings → Secrets and variables → Actions → New repository secret
 | `LINE_CHANNEL_ACCESS_TOKEN` | Channel access token จาก LINE Developers Console |
 | `NOTIFICATION_MESSAGE` | ข้อความที่จะส่งทุกวัน |
 
-> ไม่มี `LINE_USER_ID` แล้ว — ดึงจาก Google Sheets ผ่าน Apps Script แทน
-
 ---
 
 ## Workflow (notify.yaml)
