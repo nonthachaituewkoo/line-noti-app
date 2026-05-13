@@ -38,6 +38,7 @@ function doPost(e) {
       }
     });
 
+    formatSheet();
     return okResponse();
   } catch (err) {
     return okResponse();
@@ -72,6 +73,32 @@ function setStatus(sheet, userId, status) {
       break;
     }
   }
+}
+
+function formatSheet() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = Math.max(sheet.getLastRow(), 2);
+
+  const header = sheet.getRange(1, 1, 1, 3);
+  header.setFontWeight('bold');
+  header.setBackground('#4A90D9');
+  header.setFontColor('#FFFFFF');
+  header.setHorizontalAlignment('center');
+
+  sheet.setFrozenRows(1);
+  sheet.autoResizeColumns(1, 3);
+
+  const values = sheet.getRange(2, 3, lastRow - 1, 1).getValues();
+  values.forEach((row, i) => {
+    const cell = sheet.getRange(i + 2, 3);
+    if (row[0] === 'active') {
+      cell.setBackground('#C6EFCE');
+      cell.setFontColor('#276221');
+    } else if (row[0] === 'inactive') {
+      cell.setBackground('#FFCCCC');
+      cell.setFontColor('#9C0006');
+    }
+  });
 }
 
 function okResponse() {
