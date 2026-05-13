@@ -1,0 +1,17 @@
+name: LINE Daily Notification
+
+on:
+  schedule:
+    - cron: '30 1 * * 1-5'  # 8:30 AM Bangkok (UTC+7), Mon-Fri
+  workflow_dispatch:
+
+jobs:
+  send-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send LINE Notification
+        run: |
+          curl -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}" \
+            -d "{\"to\":\"${{ secrets.LINE_USER_ID }}\",\"messages\":[{\"type\":\"text\",\"text\":\"${{ secrets.NOTIFICATION_MESSAGE }}\"}]}"
