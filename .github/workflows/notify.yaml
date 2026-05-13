@@ -9,49 +9,12 @@ jobs:
   send-notification:
     runs-on: ubuntu-latest
     steps:
-      - name: Get user IDs from Google Sheets
+      - name: Get active user IDs from Apps Script
         id: get_users
         run: |
-          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > /tmp/credentials.json
-
-          TOKEN=$(curl -s -X POST "https://oauth2.googleapis.com/token" \
-            -H "Content-Type: application/json" \
-            -d "$(python3 -c "
-          import json, time, base64, hashlib, hmac
-          import urllib.request, urllib.parse
-
-          creds = json.load(open('/tmp/credentials.json'))
-          now = int(time.time())
-          header = base64.urlsafe_b64encode(json.dumps({'alg':'RS256','typ':'JWT'}).encode()).rstrip(b'=').decode()
-          payload = base64.urlsafe_b64encode(json.dumps({
-            'iss': creds['client_email'],
-            'scope': 'https://www.googleapis.com/auth/spreadsheets.readonly',
-            'aud': 'https://oauth2.googleapis.com/token',
-            'iat': now,
-            'exp': now + 3600
-          }).encode()).rstrip(b'=').decode()
-
-          import subprocess, tempfile, os
-          key = creds['private_key']
-          with tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False) as f:
-            f.write(key)
-            key_file = f.name
-
-          msg = f'{header}.{payload}'.encode()
-          result = subprocess.run(['openssl', 'dgst', '-sha256', '-sign', key_file, '-binary'],
-            input=msg, capture_output=True)
-          sig = base64.urlsafe_b64encode(result.stdout).rstrip(b'=').decode()
-          os.unlink(key_file)
-
-          jwt = f'{header}.{payload}.{sig}'
-          print(json.dumps({'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer', 'assertion': jwt}))
-          ")" | jq -r '.access_token')
-
-          SHEET_DATA=$(curl -s \
-            "https://sheets.googleapis.com/v4/spreadsheets/1rv_rUmluWCnlqOXCmdbkemYN4jfFg7cNXfnCksk-6pI/values/userId" \
-            -H "Authorization: Bearer $TOKEN")
-
-          USER_IDS=$(echo "$SHEET_DATA" | jq -r '.values[]? | select(.[2] == "active") | .[0]')
+          RESPONSE=$(curl -sL "https://script.google.com/macros/s/AKfycbwc-_yiW_pES560tviBlqgqsXIk_Bjn9u3CRyPy3PHERgKJWPw2CMntunnsx3i-L8GWEg/exec?action=getActiveUsers")
+          echo "response=$RESPONSE"
+          USER_IDS=$(echo "$RESPONSE" | jq -r '.users[]?')
           echo "user_ids<<EOF" >> $GITHUB_OUTPUT
           echo "$USER_IDS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -60,8 +23,12 @@ jobs:
         run: |
           while IFS= read -r USER_ID; do
             [ -z "$USER_ID" ] && continue
+            BODY=$(jq -n \
+              --arg to "$USER_ID" \
+              --arg text "${{ secrets.NOTIFICATION_MESSAGE }}" \
+              '{to: $to, messages: [{type: "text", text: $text}]}')
             curl -s -X POST https://api.line.me/v2/bot/message/push \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}" \
-              -d "{\"to\":\"$USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"${{ secrets.NOTIFICATION_MESSAGE }}\"}]}"
+              -d "$BODY"
           done <<< "${{ steps.get_users.outputs.user_ids }}"
