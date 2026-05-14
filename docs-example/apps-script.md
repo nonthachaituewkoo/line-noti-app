@@ -1,6 +1,8 @@
 # Apps Script Setup
 
-รับ LINE webhook events และบันทึก userId ลง Google Sheets พร้อม serve รายชื่อ active users ให้ GitHub Actions
+รับ LINE webhook events และบันทึก userId ลง Google Sheets
+
+> การส่ง LINE notification ดูได้ที่ [app-script-line-notify.md](app-script-line-notify.md)
 
 ---
 
